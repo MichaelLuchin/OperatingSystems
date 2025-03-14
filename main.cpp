@@ -1,21 +1,8 @@
 #include <iostream>
 #include <math.h>
+#include "unixfilework.cpp"
 
 using namespace std;
-
-int septToDec(string &sept);
-
-bool isSept(string &sept);
-
-int main() {
-    string sept;
-    cin >> sept;
-
-    if(isSept(sept)) {
-        cout << septToDec(sept);
-    }
-    return 0;
-}
 
 int septToDec(string &sept){
     int dec = 0;
@@ -31,8 +18,14 @@ bool isSept(string &sept){
         if (s - 48 > 6) {
             cout << "Not septenary or numeric";
             return false;
-
         }
     }
     return true;
 }
+
+int main(int argc, char* argv[]) {
+    unix_file_work(argc, argv);
+    return 0;
+}
+
+
