@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <cstring>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -70,21 +71,21 @@ void show_help(const char* program_name) {
 }
 
 void interactive_work(char choise){
-    std::string input;
+    std::string src_inp;
+    std::string dest_inp;
     std::cout << "Input src file path: ";
-    std::cin >> input;
-    const char *src = input.c_str();
-    input.clear();
+    std::cin >> src_inp;
+    const char *src = src_inp.c_str();
 
     if (choise == '1'){
         std::cout << "Input copy file path: ";
-        std::cin >> input;
-        const char *dest = input.c_str();
+        std::cin >> dest_inp;
+        const char *dest = dest_inp.c_str();
         copy_file(src, dest);
     } else if(choise == '2'){
         std::cout << "Input move file path: ";
-        std::cin >> input;
-        const char *dest = input.c_str();
+        std::cin >> dest_inp;
+        const char *dest = dest_inp.c_str();
         move_file(src, dest);
     } else if(choise == '3'){
         get_file_info(src);
