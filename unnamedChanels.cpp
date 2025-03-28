@@ -1,17 +1,15 @@
-//
-// Created by m_luc on 28.03.2025.
-//
 #include <iostream>
 #include <string>
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstring>
+#include <algorithm>
 using namespace std;
 
 struct ConversionData {
-    int from_base;
-    int to_base;
+    int base;
     string number;
+    bool to_decimal; // true - в десятичную, false - из десятичной
 };
 
 int pipe_in[2];
@@ -20,45 +18,45 @@ pid_t pid;
 
 void help() {
     cout << "Справка:\n"
-         << "Программа для перевода чисел между системами счисления\n"
-         << "Формат ввода: <исходная_система> <целевая_система> <число>\n"
-         << "Пример: 2 10 1010 (переведёт 1010 из двоичной в десятичную)\n"
-         << "Для десятичной в другую систему введите 10 <целевая_система> <число>\n"
-         << "Из другой системы в десятичную введите <исходная_система> 10 <число>\n";
+         << "Программа для перевода чисел:\n"
+         << "1. Из произвольной системы счисления в десятичную\n"
+         << "2. Из десятичной системы в произвольную\n"
+         << "Системы счисления могут быть от 2 до 36\n";
 }
 
 int read_base(const string& msg) {
     int result;
-    bool flag = true;
-
-    while (flag) {
+    while (true) {
         cout << msg;
         cin >> result;
-        if(result < 2 || result > 36 || cin.fail() || (cin.peek() != '\n')) {
+        if (cin.fail() || result < 2 || result > 36) {
             cin.clear();
             cin.ignore(1000, '\n');
-            cout << " > Ошибка: система счисления должна быть от 2 до 36\n";
+            cout << "Ошибка: система счисления должна быть от 2 до 36\n";
         } else {
-            flag = false;
+            cin.ignore(1000, '\n');
+            return result;
         }
     }
-    return result;
 }
 
 string read_number(const string& msg) {
     string result;
     cout << msg;
-    cin >> result;
+    getline(cin, result);
+
+    // Преобразуем в верхний регистр для единообразия
+    transform(result.begin(), result.end(), result.begin(), ::toupper);
     return result;
 }
 
-// Проверка корректности числа для заданной системы счисления
 bool is_valid_number(const string& num, int base) {
+    if (num.empty()) return false;
+
     for (char c : num) {
         int digit;
         if (c >= '0' && c <= '9') digit = c - '0';
         else if (c >= 'A' && c <= 'Z') digit = 10 + (c - 'A');
-        else if (c >= 'a' && c <= 'z') digit = 10 + (c - 'a');
         else return false;
 
         if (digit >= base) return false;
@@ -67,47 +65,74 @@ bool is_valid_number(const string& num, int base) {
 }
 
 // Перевод из произвольной системы в десятичную
-string arbitrary_to_decimal(const string& num, int from_base) {
+string arbitrary_to_decimal(const string& num, int base) {
     long long result = 0;
     for (char c : num) {
-        int digit;
-        if (c >= '0' && c <= '9') digit = c - '0';
-        else if (c >= 'A' && c <= 'Z') digit = 10 + (c - 'A');
-        else digit = 10 + (c - 'a');
-
-        result = result * from_base + digit;
+        int digit = (c >= 'A') ? (10 + (c - 'A')) : (c - '0');
+        result = result * base + digit;
     }
     return to_string(result);
 }
 
 // Перевод из десятичной системы в произвольную
-string decimal_to_arbitrary(const string& num, int to_base) {
+string decimal_to_arbitrary(string num, int base) {
+    // Проверяем, что строка содержит только цифры
+    for (char c : num) {
+        if (!isdigit(c)) {
+            return "Ошибка: входное число должно быть десятичным";
+        }
+    }
+
     long long decimal = stoll(num);
     if (decimal == 0) return "0";
 
     string result;
     while (decimal > 0) {
-        int digit = decimal % to_base;
-        char c;
-        if (digit < 10) c = '0' + digit;
-        else c = 'A' + (digit - 10);
-
+        int digit = decimal % base;
+        char c = (digit < 10) ? ('0' + digit) : ('A' + (digit - 10));
         result = c + result;
-        decimal /= to_base;
+        decimal /= base;
     }
     return result;
 }
 
 void frontend() {
     ConversionData data;
-    data.from_base = read_base("Введите исходную систему счисления (2-36): ");
-    data.to_base = read_base("Введите целевую систему счисления (2-36): ");
-    data.number = read_number("Введите число для преобразования: ");
+    cout << "Выберите направление перевода:\n"
+         << "1. Из произвольной системы в десятичную\n"
+         << "2. Из десятичной системы в произвольную\n"
+         << "Ваш выбор: ";
 
-    // Проверка корректности числа
-    if (!is_valid_number(data.number, data.from_base)) {
-        cerr << "Ошибка: число " << data.number << " недопустимо в системе с основанием " << data.from_base << endl;
+    int choice;
+    cin >> choice;
+    cin.ignore(); // Очищаем буфер после ввода числа
+
+    if (choice == 1) {
+        data.to_decimal = true;
+        data.base = read_base("Введите исходную систему счисления (2-36): ");
+        cout << "Введите число в " << data.base << "-чной системе: ";
+    } else if (choice == 2) {
+        data.to_decimal = false;
+        data.base = read_base("Введите целевую систему счисления (2-36): ");
+        cout << "Введите десятичное число: ";
+    } else {
+        cerr << "Ошибка: неверный выбор\n";
         exit(1);
+    }
+
+    data.number = read_number("");
+
+    if (data.to_decimal && !is_valid_number(data.number, data.base)) {
+        cerr << "Ошибка: число " << data.number << " недопустимо в системе с основанием " << data.base << endl;
+        exit(1);
+    }
+    if (!data.to_decimal) {
+        for (char c : data.number) {
+            if (!isdigit(c)) {
+                cerr << "Ошибка: введено не десятичное число\n";
+                exit(1);
+            }
+        }
     }
 
     write(pipe_in[1], &data, sizeof(ConversionData));
@@ -123,21 +148,17 @@ void backend() {
     read(pipe_in[0], &data, sizeof(ConversionData));
 
     string result;
-    if (data.from_base == 10) {
-        result = decimal_to_arbitrary(data.number, data.to_base);
-    } else if (data.to_base == 10) {
-        result = arbitrary_to_decimal(data.number, data.from_base);
+    if (data.to_decimal) {
+        result = arbitrary_to_decimal(data.number, data.base);
     } else {
-        // Двойной перевод: сначала в десятичную, затем в целевую
-        string decimal = arbitrary_to_decimal(data.number, data.from_base);
-        result = decimal_to_arbitrary(decimal, data.to_base);
+        result = decimal_to_arbitrary(data.number, data.base);
     }
 
     write(pipe_out[1], result.c_str(), result.size() + 1);
 }
 
 int do_unnamed_pipes(int argc, char *argv[]) {
-    setlocale(LC_ALL, "");
+    setlocale(LC_ALL, "ru_RU.UTF-8");
 
     if (argc == 2 && !strcmp(argv[1], "--help")) {
         help();
@@ -149,12 +170,15 @@ int do_unnamed_pipes(int argc, char *argv[]) {
 
     cout << "Программа для перевода чисел между системами счисления (2-36)\n";
 
-    pipe(pipe_in);
-    pipe(pipe_out);
+    if (pipe(pipe_in) == -1 || pipe(pipe_out) == -1) {
+        perror("pipe");
+        exit(1);
+    }
+
     pid = fork();
 
     if (pid < 0) {
-        cerr << "Ошибка: не удалось создать процесс" << endl;
+        perror("fork");
         exit(1);
     } else if (pid > 0) {
         frontend();
@@ -162,10 +186,11 @@ int do_unnamed_pipes(int argc, char *argv[]) {
         backend();
     }
 
-    for (int i = 0; i < 2; ++i) {
-        close(pipe_in[i]);
-        close(pipe_out[i]);
-    }
+    // Эти строки никогда не выполнятся, так как frontend/backend завершают процесс
+    close(pipe_in[0]);
+    close(pipe_in[1]);
+    close(pipe_out[0]);
+    close(pipe_out[1]);
 
     return 0;
 }
