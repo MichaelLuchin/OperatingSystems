@@ -1,6 +1,7 @@
 #include <iostream>
 #include <math.h>
 #include "unixfilework.cpp"
+#include "unnamedChanels.cpp"
 
 using namespace std;
 
@@ -24,7 +25,8 @@ bool isSept(string &sept){
 }
 
 int main(int argc, char* argv[]) {
-    unix_file_work(argc, argv);
+    //unix_file_work(argc, argv);
+    do_unnamed_pipes(argc, argv);
     return 0;
 }
 
