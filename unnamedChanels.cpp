@@ -3,13 +3,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstring>
-#include <algorithm>
 using namespace std;
 
 struct ConversionData {
     int base;
-    string number;
-    bool to_decimal; // true - в десятичную, false - из десятичной
+    char number[256];
+    bool to_decimal;
 };
 
 int pipe_in[2];
@@ -40,14 +39,23 @@ int read_base(const string& msg) {
     }
 }
 
-string read_number(const string& msg) {
-    string result;
+void read_number(const string& msg, char* buffer, size_t buffer_size) {
     cout << msg;
-    getline(cin, result);
 
-    // Преобразуем в верхний регистр для единообразия
-    transform(result.begin(), result.end(), result.begin(), ::toupper);
-    return result;
+    string temp;
+    getline(cin, temp);
+
+    if (temp.size() >= buffer_size) {
+        cerr << "Ошибка: введённое число слишком длинное (максимум "
+             << buffer_size - 1 << " символов)\n";
+        exit(1);
+    }
+
+    // Копируем и преобразуем в верхний регистр
+    for (size_t i = 0; i < temp.size(); ++i) {
+        buffer[i] = toupper(temp[i]);
+    }
+    buffer[temp.size()] = '\0';
 }
 
 bool is_valid_number(const string& num, int base) {
@@ -120,7 +128,7 @@ void frontend() {
         exit(1);
     }
 
-    data.number = read_number("");
+    read_number("", data.number, sizeof(data.number));
 
     if (data.to_decimal && !is_valid_number(data.number, data.base)) {
         cerr << "Ошибка: число " << data.number << " недопустимо в системе с основанием " << data.base << endl;
@@ -128,6 +136,7 @@ void frontend() {
     }
     if (!data.to_decimal) {
         for (char c : data.number) {
+            if (c == '\0') break;
             if (!isdigit(c)) {
                 cerr << "Ошибка: введено не десятичное число\n";
                 exit(1);
@@ -186,7 +195,6 @@ int do_unnamed_pipes(int argc, char *argv[]) {
         backend();
     }
 
-    // Эти строки никогда не выполнятся, так как frontend/backend завершают процесс
     close(pipe_in[0]);
     close(pipe_in[1]);
     close(pipe_out[0]);
