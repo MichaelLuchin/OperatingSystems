@@ -1,7 +1,8 @@
 #include <iostream>
 #include <math.h>
-#include "unixfilework.cpp"
-#include "unnamedChanels.cpp"
+#include <thread>
+#include "namedChannelsClient.cpp"
+#include "namedChannelsServer.cpp"
 
 using namespace std;
 
@@ -25,8 +26,9 @@ bool isSept(string &sept){
 }
 
 int main(int argc, char* argv[]) {
-    //unix_file_work(argc, argv);
-    do_unnamed_pipes(argc, argv);
+    std::thread serverThread(server);
+    client();
+    serverThread.join();
     return 0;
 }
 
