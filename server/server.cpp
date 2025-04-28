@@ -12,6 +12,7 @@ using namespace std;
 HANDLE hSemaphore;
 vector<SOCKET> clientSockets;
 int clientCount = 0;
+const int MAX_CLIENTS = 2;
 
 struct Calculation {
     double num1;
@@ -99,7 +100,7 @@ int main() {
         return 1;
     }
 
-    hSemaphore = CreateSemaphoreA(NULL, 2, 2, "CalculatorSemaphore");
+    hSemaphore = CreateSemaphoreA(NULL, MAX_CLIENTS, MAX_CLIENTS, "CalculatorSemaphore");
     if(hSemaphore == NULL) {
         cerr << "CreateSemaphore error: " << GetLastError() << endl;
         WSACleanup();
@@ -141,12 +142,7 @@ int main() {
             continue;
         }
 
-        if(WaitForSingleObject(hSemaphore, 0) == WAIT_TIMEOUT) {
-            string msg = "Server busy. Maximum clients connected.";
-            send(clientSocket, msg.c_str(), msg.size() + 1, 0);
-            closesocket(clientSocket);
-            continue;
-        }
+        WaitForSingleObject(hSemaphore, INFINITE);
 
         clientCount++;
         int clientId = clientCount;
@@ -158,6 +154,8 @@ int main() {
         if(hThread == NULL) {
             delete params;
             closesocket(clientSocket);
+            ReleaseSemaphore(hSemaphore, 1, NULL);
+            clientCount--;
             continue;
         }
 
