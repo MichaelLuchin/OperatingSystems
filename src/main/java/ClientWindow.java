@@ -51,17 +51,18 @@ public class ClientWindow extends javax.swing.JFrame {
     }
     private void connectToServer() {
         try {
+            closeConnection();
+
             socket = new Socket("localhost", 12345);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
             jTextArea1.append("Connected to server.\n");
-            jTextArea1.append("Enter expressions in format: <number> <operator> <number>\n");
-            jTextArea1.append("Supported operators: + - * /\n");
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Connection error: " + e.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            logger.error("Connection error", e);
+            logError("Connection error: " + e.getMessage());
+            socket = null;
+            out = null;
+            in = null;
         }
     }
 
@@ -219,8 +220,17 @@ public class ClientWindow extends javax.swing.JFrame {
         }
 
         try {
-            logAction("Sending to server: " + input);
+            if (socket == null || socket.isClosed() || !socket.isConnected()) {
+                logAction("Connection lost. Attempting to reconnect...");
+                connectToServer();
 
+                if (socket == null || socket.isClosed()) {
+                    logError("Failed to reconnect to server");
+                    return;
+                }
+            }
+
+            logAction("Sending to server: " + input);
             out.println(input);
 
             String response = in.readLine();
@@ -231,6 +241,7 @@ public class ClientWindow extends javax.swing.JFrame {
             jTextField1.setText("");
         } catch (IOException e) {
             logError("Communication error: " + e.getMessage());
+            closeConnection();
         }
     }
 
