@@ -3,6 +3,17 @@ plugins {
     id 'java'
 }
 
+// Явно указываем версию Java
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21) // Используем Java 17
+    }
+}
+
+ wrapper {
+     gradleVersion = '8.4'
+ }
+
 repositories {
     mavenCentral()
 }
@@ -16,6 +27,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// Отключаем стандартный jar, так как создаем свои
 tasks.named('jar') {
     enabled = false
 }
@@ -49,3 +61,7 @@ application {
 }
 
 assemble.dependsOn serverJar, clientJar
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}

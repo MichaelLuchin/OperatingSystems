@@ -9,3 +9,5 @@
 /gradlew
 /client_log.txt
 /server_log.txt
+/META-INF/
+/out/
