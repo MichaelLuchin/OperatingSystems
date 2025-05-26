@@ -2,3 +2,10 @@
 /cmake-build-debug
 /testF.txt
 /test_dir/
+.gradle
+/gradle
+/build
+/gradlew.bat
+/gradlew
+/client_log.txt
+/server_log.txt
